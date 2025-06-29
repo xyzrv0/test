@@ -18,7 +18,7 @@ local espEnabled = false
 local espColor = Color3.fromRGB(255, 0, 0)
 local maxBoxSize = Vector2.new(80, 120)
 local minBoxSize = Vector2.new(20, 40)
-local maxESPDistance = 150 -- Max distance to draw ESP
+local maxESPDistance = 150
 
 -- Utility: check visibility
 local function isPlayerVisible(player)
@@ -42,7 +42,7 @@ local function isPlayerVisible(player)
     end
 end
 
--- Chams functions
+-- Chams
 local function applyChamsToPlayer(player)
     if player == LocalPlayer then return end
 
@@ -99,7 +99,7 @@ local function updateAllChams()
     end
 end
 
--- Drawing ESP logic
+-- ESP Drawing
 local function createBox(player)
     local box = Drawing.new("Square")
     box.Visible = false
@@ -171,35 +171,44 @@ local function updateBox(player)
     drawingData.outline.Visible = espEnabled
 end
 
+-- ESP update loop
 RunService.RenderStepped:Connect(function()
-    if espEnabled then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                if not DrawingESP[player] then
-                    createBox(player)
-                end
-                updateBox(player)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if not DrawingESP[player] then
+                createBox(player)
             end
-        end
-    else
-        for _, drawingData in pairs(DrawingESP) do
-            drawingData.box.Visible = false
-            drawingData.outline.Visible = false
+            if espEnabled then
+                updateBox(player)
+            else
+                DrawingESP[player].box.Visible = false
+                DrawingESP[player].outline.Visible = false
+            end
         end
     end
 end)
 
+-- Player Events
 Players.PlayerRemoving:Connect(function(player)
     removeBox(player)
     removeChamsFromPlayer(player)
 end)
 
-Players.PlayerAdded:Connect(function(player)
+-- Handles chams/ESP when player joins or respawns
+local function setupPlayer(player)
+    if player == LocalPlayer then return end
+
     player.CharacterAdded:Connect(function()
         task.wait(1)
         if chamsEnabled then applyChamsToPlayer(player) end
+        if not DrawingESP[player] then createBox(player) end
     end)
-end)
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+for _, player in ipairs(Players:GetPlayers()) do
+    setupPlayer(player)
+end
 
 -- UI Setup
 local Tab = Library:Tab("Visuals")
@@ -265,7 +274,7 @@ ESPSection:Dropdown("ESP Color", {"Red", "Orange", "Yellow", "Green", "Teal", "C
     espColor = colors[v] or espColor
 end)
 
--- UI Toggle
+-- UI toggle (Insert key)
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
